@@ -5,7 +5,6 @@ import argparse
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Ensure UTF-8 output on Windows terminal
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -79,7 +78,7 @@ def print_lead_summary(url: str, lead: dict):
     print("-" * 65)
 
 def process_url(url: str):
-    url = url.strip()
+    url = url.strip().lstrip("\ufeff")
     if not url:
         return
     print(f"\n[1/2] Scraping: {url} ...")
@@ -111,23 +110,13 @@ def main():
     print_banner()
 
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or api_key.strip() == "your_api_key_here":
-        print("\n[!] WARNING: GEMINI_API_KEY is not set.")
-        print("    1. Get a FREE API key from: https://aistudio.google.com/app/apikey")
-        print("    2. Open the .env file in this directory and paste your key:\n")
-        user_key = input("Enter your Gemini API key now (or press Enter to exit): ").strip()
-        if user_key:
-            os.environ["GEMINI_API_KEY"] = user_key
-            with open(".env", "w", encoding="utf-8") as f:
-                f.write(f"GEMINI_API_KEY={user_key}\n")
-            print(" [OK] API Key saved to .env!\n")
-        else:
-            print("Exiting. Please set your key and try again.")
-            sys.exit(1)
+    if not api_key:
+        print("\n[!] Error: GEMINI_API_KEY is not set.")
+        sys.exit(1)
 
     parser = argparse.ArgumentParser(description="AI Lead Scraper CLI")
     parser.add_argument("--url", help="Single website URL to scrape and analyze")
-    parser.add_argument("--file", help="Path to text file containing URLs (one per line)")
+    parser.add_argument("--file", help="Path to text file containing URLs")
 
     args = parser.parse_args()
 
@@ -138,7 +127,7 @@ def main():
             print(f"File not found: {args.file}")
             sys.exit(1)
         with open(args.file, "r", encoding="utf-8") as f:
-            urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+            urls = [line.strip().lstrip("\ufeff") for line in f if line.strip() and not line.startswith("#")]
         print(f"Found {len(urls)} URLs to process.")
         for u in urls:
             process_url(u)
@@ -147,36 +136,19 @@ def main():
         print(" 1. Analyze a single website URL")
         print(" 2. Batch analyze websites from 'urls.txt'")
         print(" 3. Exit")
-        choice = input("\nEnter choice (1/2/3 or paste URL directly): ").strip()
-
-        # Smarter input handling
-        if choice.startswith("py ") or choice.startswith("python "):
-            # In case the user typed a command into the prompt
-            parts = choice.split()
-            if "--url" in parts:
-                idx = parts.index("--url")
-                if idx + 1 < len(parts):
-                    process_url(parts[idx + 1])
-                    return
-        elif "." in choice and ("http" in choice or not choice.isdigit()):
-            # User directly pasted a URL!
-            process_url(choice)
-            return
+        choice = input("\nEnter choice (1/2/3 or paste URL): ").strip()
 
         if choice == "1":
-            target = input("Enter website URL (e.g., stripe.com or https://supabase.com): ").strip()
+            target = input("Enter website URL (e.g. stripe.com): ").strip()
             if target:
                 process_url(target)
         elif choice == "2":
             file_path = "urls.txt"
-            if not os.path.exists(file_path):
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write("https://stripe.com\nhttps://supabase.com\nhttps://postman.com\n")
-                print(f"Created sample {file_path} with demo URLs.")
-            with open(file_path, "r", encoding="utf-8") as f:
-                urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-            for u in urls:
-                process_url(u)
+            if os.path.exists(file_path):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    urls = [line.strip().lstrip("\ufeff") for line in f if line.strip() and not line.startswith("#")]
+                for u in urls:
+                    process_url(u)
         else:
             print("Goodbye!")
 

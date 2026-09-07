@@ -1,3 +1,3 @@
-﻿https://stripe.com
+https://stripe.com
 https://supabase.com
 https://postman.com
